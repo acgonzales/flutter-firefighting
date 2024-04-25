@@ -1,0 +1,4 @@
+0 Purple
+1 Brown
+2 Fire
+3 Non fire
