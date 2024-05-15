@@ -23,5 +23,20 @@ final availableCamerasProvider =
 
 typedef AvailableCamerasRef
     = AutoDisposeFutureProviderRef<List<cam.CameraDescription>>;
+String _$cameraBusyHash() => r'6c71f05a867d5bb4810eda8b079c55fc03c7e8db';
+
+/// See also [CameraBusy].
+@ProviderFor(CameraBusy)
+final cameraBusyProvider =
+    AutoDisposeNotifierProvider<CameraBusy, bool>.internal(
+  CameraBusy.new,
+  name: r'cameraBusyProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$cameraBusyHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$CameraBusy = AutoDisposeNotifier<bool>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

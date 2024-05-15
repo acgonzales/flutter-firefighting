@@ -1,10 +1,8 @@
 import 'package:flextras/flextras.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:flutter_firefighter/core/bluetooth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class DeviceDiscoveryPage extends ConsumerStatefulWidget {
   const DeviceDiscoveryPage({super.key});
@@ -14,26 +12,9 @@ class DeviceDiscoveryPage extends ConsumerStatefulWidget {
 }
 
 class _DeviceDiscoveryPageState extends ConsumerState<DeviceDiscoveryPage> {
-  List<BluetoothDevice>? _devices = null;
-
   @override
   void initState() {
     super.initState();
-
-    Future.wait([
-      Permission.bluetoothConnect.request(),
-      Permission.bluetoothScan.request(),
-    ]).then((_) {
-      return {
-        FlutterBluetoothSerial.instance
-            .getBondedDevices()
-            .then((List<BluetoothDevice> bondedDevices) {
-          setState(() {
-            _devices = bondedDevices;
-          });
-        })
-      };
-    });
   }
 
   @override
@@ -48,29 +29,64 @@ class _DeviceDiscoveryPageState extends ConsumerState<DeviceDiscoveryPage> {
         children: [
           const Text('You may want to look for a device named "HC-05"'),
           const Gap(8),
-          Expanded(
-            child: _devices == null
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _devices!.length,
-                    itemBuilder: (context, index) {
-                      final device = _devices![index];
-                      return Consumer(builder: (context, ref, _) {
+          Consumer(
+            child: const Center(child: CircularProgressIndicator()),
+            builder: (context, ref, child) {
+              final pairedDevices = ref.watch(pairedDevicesProvider);
+              return pairedDevices.when(
+                loading: () => child!,
+                error: (error, stacktrace) => const Center(
+                  child: Text('Something went wrong...'),
+                ),
+                data: (data) {
+                  if (data.isEmpty) {
+                    return const Center(child: Text('No device found'));
+                  }
+
+                  return Expanded(
+                    child: ListView.builder(
+                      itemCount: data.length,
+                      itemBuilder: (context, index) {
+                        final device = data[index];
                         return ListTile(
-                          onTap: () {
-                            ref
-                                .read(bluetoothNotifierProvider.notifier)
-                                .connectToDevice(device)
-                                .then((value) {
-                              Navigator.of(context).pop();
-                            });
+                          onTap: () async {
+                            final answer = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Connect to this device?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Yes'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (answer == true) {
+                              await ref
+                                  .read(connectedDeviceProvider.notifier)
+                                  .setConnectedDevice(device)
+                                  .then(
+                                (_) {
+                                  Navigator.of(context).pop();
+                                },
+                              );
+                            }
                           },
                           title: Text(device.name ?? 'Unknown'),
                           subtitle: Text(device.address),
                         );
-                      });
-                    },
-                  ),
+                      },
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),

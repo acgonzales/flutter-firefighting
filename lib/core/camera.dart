@@ -7,3 +7,11 @@ part 'camera.g.dart';
 Future<List<cam.CameraDescription>> availableCameras(AvailableCamerasRef ref) {
   return cam.availableCameras();
 }
+
+@riverpod
+class CameraBusy extends _$CameraBusy {
+  @override
+  bool build() => false;
+
+  void setBusy(bool busy) => state = busy;
+}
